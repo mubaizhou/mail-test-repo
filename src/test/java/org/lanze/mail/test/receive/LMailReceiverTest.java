@@ -1,5 +1,13 @@
 package org.lanze.mail.test.receive;
 
-public class LMailReceiverTest {
+import org.junit.Test;
+import org.lanze.mail.receive.LMailReceiver;
 
+
+public class LMailReceiverTest {
+	
+	@Test
+	public void testFetch(){
+		LMailReceiver.fetch();
+	}
 }
