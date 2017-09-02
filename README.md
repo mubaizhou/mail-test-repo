@@ -1,0 +1,1 @@
+JavaMail test project.
