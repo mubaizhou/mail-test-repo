@@ -5,6 +5,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,16 +16,52 @@ import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
+import javax.mail.NoSuchProviderException;
 import javax.mail.Part;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeUtility;
 
+import org.lanze.mail.constant.UMailConstants;
+import org.lanze.mail.preprocessor.HostInfoProcessor;
+
 import jdk.nashorn.internal.runtime.regexp.RegExp;
 import jdk.nashorn.internal.runtime.regexp.RegExpMatcher;
 
 public class LMailReceiver {
+	/*public static Message[] fetch(String mailAddress,String password) {
+		String pop3Host = new HostInfoProcessor().getPop3Host(mailAddress);
+		Message[] messages = null;
+		try {
+	         // create properties field
+	         Properties properties = new Properties();
+	         properties.put("mail.store.protocol", UMailConstants.STORE_TYPE);
+	         properties.put("mail.pop3.host", pop3Host);
+	         properties.put("mail.pop3.port", UMailConstants.POP3_PORT);
+	         properties.put("mail.pop3.starttls.enable", "true");
+	         Session emailSession = Session.getDefaultInstance(properties);
+	         // emailSession.setDebug(true);
+	         // create the POP3 store object and connect with the pop server
+	         Store store = emailSession.getStore(UMailConstants.STORE_TYPE);
+	         store.connect(pop3Host, mailAddress, password);
+	         // create the folder object and open it
+	         Folder emailFolder = store.getFolder("INBOX");
+	         emailFolder.open(Folder.READ_ONLY);
+	         // retrieve the messages from the folder in an array and print it
+	         messages = emailFolder.getMessages();
+	         // close the store and folder objects
+	         //emailFolder.close(false);
+	         //store.close();
+	      } catch (NoSuchProviderException e) {
+	         e.printStackTrace();
+	      } catch (MessagingException e) {
+	         e.printStackTrace();
+	      } catch (Exception e) {
+	         e.printStackTrace();
+	      } 
+		return messages;
+	}*/
 	public static void fetch() {
 	      try {
 	    	  String pop3Host = "pop3.mail.ru";
@@ -58,7 +96,7 @@ public class LMailReceiver {
 	            Message message = messages[i];
 	            //Message message = messages[messages.length-1];
 	            Address[] froms = message.getFrom();
-	            if("Apple".equals(((InternetAddress)froms[0]).getPersonal())){
+	            if("Apple".equals(((InternetAddress)froms[0]).getPersonal()) && "验证您的 Apple ID 电子邮件地址".equals(message.getSubject())){
 	            	System.out.println("邮件主题:" + message.getSubject());  
 		            System.out.println("发件人地址:" + ((InternetAddress)froms[0]).getAddress());
 		            System.out.println("发件人姓名:" + ((InternetAddress)froms[0]).getPersonal());
@@ -113,13 +151,13 @@ public class LMailReceiver {
             if(part.getContentType().startsWith("text/plain")) {  
                 System.out.println("文本内容：" + part.getContent());  
                 //String verificationCode = Pattern.compile(regex).matcher(content).find();
-                String REGEX = "\\r\\n\\r\\n\\d+\\r\\n\\r\\n";
+                String REGEX = "下方验证码：\\r\\n\\r\\n\\d+\\r\\n\\r\\n";
     			String CONTENT = part.getContent().toString();
     			Pattern p = Pattern.compile(REGEX);
     		    // 获取 matcher 对象
     		    Matcher m = p.matcher(CONTENT);
     		    while(m.find()){
-    		    	System.out.println("验证码***************是："+m.group().replaceAll("\\r", "").replaceAll("\\n", ""));
+    		    	System.out.println("验证码***************是："+m.group().replaceAll("\\r", "").replaceAll("\\n", "").replace("下方验证码：", ""));
     		    }
                 
             } /*else {  
@@ -150,11 +188,102 @@ public class LMailReceiver {
          }  
     }  
 	
+    
+    
+    
+    
+    
+    public static String fetchVerificationCode(String mailAddress,String password) {
+    	String pop3Host = new HostInfoProcessor().getPop3Host(mailAddress);
+    	String verificationCode = null;
+	      try {
+	    	// create properties field
+		         Properties properties = new Properties();
+		         properties.put("mail.store.protocol", UMailConstants.STORE_TYPE);
+		         properties.put("mail.pop3.host", pop3Host);
+		         properties.put("mail.pop3.port", UMailConstants.POP3_PORT);
+		         properties.put("mail.pop3.starttls.enable", "true");
+		         Session emailSession = Session.getDefaultInstance(properties);
+		         // emailSession.setDebug(true);
+		         // create the POP3 store object and connect with the pop server
+		         Store store = emailSession.getStore(UMailConstants.STORE_TYPE);
+		         store.connect(pop3Host, mailAddress, password);
+
+	         // create the folder object and open it
+	         Folder emailFolder = store.getFolder("INBOX");
+	         emailFolder.open(Folder.READ_ONLY);
+
+
+	         // retrieve the messages from the folder in an array and print it
+	         Message[] messages = emailFolder.getMessages();
+	         //System.out.println("messages.length---" + messages.length);
+	         List<Message> messageList = new ArrayList<Message>();//专门用于存入Apple发的验证邮件。
+	         for (int i = 0; i < messages.length; i++) {
+	            Message message = messages[i];
+	            //Message message = messages[messages.length-1];
+	            Address[] froms = message.getFrom();
+	            if("Apple".equals(((InternetAddress)froms[0]).getPersonal()) && "验证您的 Apple ID 电子邮件地址".equals(message.getSubject())){
+	            	/*System.out.println("邮件主题:" + message.getSubject());  
+		            System.out.println("发件人地址:" + ((InternetAddress)froms[0]).getAddress());
+		            System.out.println("发件人姓名:" + ((InternetAddress)froms[0]).getPersonal());*/
+		            messageList.add(message);
+		         // getContent() 是获取包裹内容, Part相当于外包装  
+		            /*Object o = message.getContent();  
+		            if(o instanceof Multipart) {  
+		                Multipart multipart = (Multipart) o ;  
+		                Part part = multipart.getBodyPart(0); 
+		                if(part.getContentType().startsWith("text/plain")) {  
+		                    System.out.println("文本内容：" + part.getContent());  
+		                    String REGEX = "下方验证码：\\r\\n\\r\\n\\d+\\r\\n\\r\\n";
+		        			String CONTENT = part.getContent().toString();
+		        			Pattern p = Pattern.compile(REGEX);
+		        		    // 获取 matcher 对象
+		        		    Matcher m = p.matcher(CONTENT);
+		        		    while(m.find()){
+		        		    	return verificationCode = m.group().replaceAll("\\r", "").replaceAll("\\n", "").replace("下方验证码：", "");
+		        		    }
+		                    
+		                }
+			                
+		            }*/ 
+	            }
+	         }
+	         
+	         if(messageList.size()>0){
+	            	Object o = messageList.get(messageList.size()-1).getContent(); //因为Message[]里面是从邮件最后一页开始直到第一页的第一封，后以messageList里最后一个即是最近一个验证邮件。 
+		            if(o instanceof Multipart) {  
+		                Multipart multipart = (Multipart) o ;  
+		                Part part = multipart.getBodyPart(0); 
+		                if(part.getContentType().startsWith("text/plain")) {  
+		                    System.out.println("文本内容：" + part.getContent());  
+		                    String REGEX = "下方验证码：\\r\\n\\r\\n\\d+\\r\\n\\r\\n";
+		        			String CONTENT = part.getContent().toString();
+		        			Pattern p = Pattern.compile(REGEX);
+		        		    // 获取 matcher 对象
+		        		    Matcher m = p.matcher(CONTENT);
+		        		    while(m.find()){
+		        		    	return verificationCode = m.group().replaceAll("\\r", "").replaceAll("\\n", "").replace("下方验证码：", "");
+		        		    }
+		                    
+		                }
+			                
+		            }
+	            }
+
+	         // close the store and folder objects
+	         emailFolder.close(false);
+	         store.close();
+
+	      } catch (Exception e) {
+	         e.printStackTrace();
+	      }
+	      return verificationCode;
+	    }
 	
 	
 	
 		public static void main(String[] args) {
-			fetch();
+			System.out.println("验证码是+++++++++++++++++++++======="+fetchVerificationCode("mffaau9@mail.ru", "VfV0nmn"));
 			/*String REGEX = "a*b";
 			String INPUT = "aabfooaabfooabfoob";
 			String REPLACE = "";
